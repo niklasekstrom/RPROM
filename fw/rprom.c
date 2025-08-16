@@ -14,55 +14,53 @@
 __attribute__((section(".rom_image")))
 static uint16_t rom_image[256 * 1024];
 
+static void handle_magic_read(uint32_t address)
+{
+    const uint32_t slot = address & 7;
+    const uint32_t slot_address = 0x10000000 + slot * 0x80000;
+    memcpy(rom_image, (const void *)slot_address, sizeof(rom_image));
+}
+
+static void __not_in_flash_func(core1_main)()
+{
+    uint32_t magic_counter = 0;
+
+    while (1)
+    {
+        uint32_t address = multicore_fifo_pop_blocking();
+
+        if (magic_counter == 0)
+        {
+            if (address == (0x104 >> 1))
+                magic_counter++;
+        }
+        else if (magic_counter == 1)
+        {
+            if (address == (0x894 >> 1))
+                magic_counter++;
+            else
+                magic_counter = 0;
+        }
+        else if (magic_counter == 2)
+        {
+            if (address == (0x7f4fe >> 1))
+                magic_counter++;
+            else
+                magic_counter = 0;
+        }
+        else
+        {
+            handle_magic_read(address);
+            magic_counter = 0;
+        }
+    }
+}
+
 static inline void multicore_fifo_push_non_blocking_inline(uint32_t data) {
     sio_hw->fifo_wr = data;
 
     // Fire off an event to the other core
     __sev();
-}
-
-static void __not_in_flash_func(core1_main)()
-{
-    while (1)
-    {
-        uint32_t slot = multicore_fifo_pop_blocking();
-
-        const uint32_t slot_address = 0x10000000 + slot * 0x80000;
-        memcpy(rom_image, (const void *)slot_address, sizeof(rom_image));
-    }
-}
-
-static uint32_t magic_counter = 0;
-
-static void __not_in_flash_func(read_access)(uint32_t address)
-{
-    if (magic_counter == 0)
-    {
-        if (address == (0x104 >> 1))
-            magic_counter++;
-    }
-    else if (magic_counter == 1)
-    {
-        if (address == (0x894 >> 1))
-            magic_counter++;
-        else
-            magic_counter = 0;
-    }
-    else if (magic_counter == 2)
-    {
-        if (address == (0x7f4fe >> 1))
-            magic_counter++;
-        else
-            magic_counter = 0;
-    }
-    else
-    {
-        const uint32_t slot = address & 7;
-
-        multicore_fifo_push_non_blocking_inline(slot);
-
-        magic_counter = 0;
-    }
 }
 
 static void __not_in_flash_func(rom_emulation)()
@@ -84,7 +82,7 @@ static void __not_in_flash_func(rom_emulation)()
 
             if (!triggered)
             {
-                read_access(address);
+                multicore_fifo_push_non_blocking_inline(address);
                 triggered = 1;
             }
         }
@@ -96,7 +94,7 @@ static void __not_in_flash_func(rom_emulation)()
     }
 }
 
-int __not_in_flash_func(main)()
+void __not_in_flash_func(main)()
 {
     set_sys_clock_khz(200000, false);
 
