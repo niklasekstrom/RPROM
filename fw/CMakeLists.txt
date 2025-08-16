@@ -22,4 +22,10 @@ pico_enable_stdio_uart(rprom 0)
 
 pico_add_extra_outputs(rprom)
 
-target_link_libraries(rprom pico_stdlib pico_multicore)
+target_compile_definitions(rprom PRIVATE PICO_CORE1_STACK_SIZE=0)
+
+target_link_libraries(rprom
+  pico_stdlib
+  pico_multicore
+  hardware_flash
+)
