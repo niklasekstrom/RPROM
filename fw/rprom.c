@@ -1,5 +1,7 @@
-#include "hardware/gpio.h"
 #include "hardware/clocks.h"
+#include "hardware/gpio.h"
+
+#include "pico/multicore.h"
 
 #include <string.h>
 
@@ -11,6 +13,24 @@
 
 __attribute__((section(".rom_image")))
 static uint16_t rom_image[256 * 1024];
+
+static inline void multicore_fifo_push_non_blocking_inline(uint32_t data) {
+    sio_hw->fifo_wr = data;
+
+    // Fire off an event to the other core
+    __sev();
+}
+
+static void __not_in_flash_func(core1_main)()
+{
+    while (1)
+    {
+        uint32_t slot = multicore_fifo_pop_blocking();
+
+        const uint32_t slot_address = 0x10000000 + slot * 0x80000;
+        memcpy(rom_image, (const void *)slot_address, sizeof(rom_image));
+    }
+}
 
 static uint32_t magic_counter = 0;
 
@@ -37,11 +57,9 @@ static void __not_in_flash_func(read_access)(uint32_t address)
     }
     else
     {
-        gpio_set_dir_in_masked(DATA_MASK);
-
         const uint32_t slot = address & 7;
-        const uint32_t slot_address = 0x10000000 + slot * 0x80000;
-        memcpy(rom_image, (const void *)slot_address, sizeof(rom_image));
+
+        multicore_fifo_push_non_blocking_inline(slot);
 
         magic_counter = 0;
     }
@@ -51,7 +69,7 @@ static void __not_in_flash_func(rom_emulation)()
 {
     uint32_t triggered = 0;
 
-    while (true)
+    while (1)
     {
         uint64_t all_pins = gpio_get_all64();
 
@@ -88,6 +106,8 @@ int __not_in_flash_func(main)()
 
     for (uint i = 0; i < 37; i++)
         gpio_init(i);
+
+    multicore_launch_core1(core1_main);
 
     rom_emulation();
 }
