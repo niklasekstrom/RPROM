@@ -104,7 +104,7 @@ static void __not_in_flash_func(core1_main)()
 
     while (1)
     {
-        uint32_t address = multicore_fifo_pop_blocking();
+        uint32_t address = multicore_fifo_pop_blocking_inline();
 
         if (magic_counter == 0)
         {
@@ -135,8 +135,6 @@ static void __not_in_flash_func(core1_main)()
 
 static inline void multicore_fifo_push_non_blocking_inline(uint32_t data) {
     sio_hw->fifo_wr = data;
-
-    // Fire off an event to the other core
     __sev();
 }
 
@@ -170,7 +168,6 @@ static void __not_in_flash_func(core0_main_rev6)()
         }
     }
 }
-
 
 static void __not_in_flash_func(core0_main_rev5)()
 {
