@@ -7,6 +7,7 @@
 
 #include <string.h>
 
+#define BYTE_PIN 34
 #define CE_PIN 35
 #define OE_PIN 36
 
@@ -135,7 +136,7 @@ static inline void multicore_fifo_push_non_blocking_inline(uint32_t data) {
     __sev();
 }
 
-static void __not_in_flash_func(core0_main)()
+static void __not_in_flash_func(core0_main_rev6)()
 {
     uint32_t triggered = 0;
 
@@ -166,18 +167,61 @@ static void __not_in_flash_func(core0_main)()
     }
 }
 
+
+static void __not_in_flash_func(core0_main_rev5)()
+{
+    uint32_t triggered = 0;
+
+    while (1)
+    {
+        uint64_t all_pins = gpio_get_all64();
+
+        if ((all_pins & (1ULL << OE_PIN)) == 0)
+        {
+            uint32_t address = (all_pins >> 16) & ((1 << 17) - 1);
+            address |= (all_pins >> (BYTE_PIN - 17)) & (1 << 17);
+
+            uint32_t value = (uint32_t)__builtin_bswap16(rom_image[address]);
+
+            gpio_put_masked(DATA_MASK, value);
+            gpio_set_dir_out_masked(DATA_MASK);
+
+            if (!triggered)
+            {
+                multicore_fifo_push_non_blocking_inline(address);
+                triggered = 1;
+            }
+        }
+        else
+        {
+            gpio_set_dir_in_masked(DATA_MASK);
+            triggered = 0;
+        }
+    }
+}
+
 void __not_in_flash_func(main)()
 {
     set_sys_clock_khz(200000, false);
+
+    gpio_set_dir_in_masked64((1ULL << 37) - 1);
+
+    for (uint i = 0; i <= OE_PIN; i++)
+        gpio_set_function(i, GPIO_FUNC_SIO);
+
+    gpio_pull_down(BYTE_PIN);
 
     const uint32_t rom_slot = get_active_rom_slot();
     const uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
     memcpy(rom_image, (const void *)rom_slot_base, sizeof(rom_image));
 
-    for (uint i = 0; i < 37; i++)
-        gpio_init(i);
+    bool rev6 = gpio_get(BYTE_PIN);
+    gpio_disable_pulls(BYTE_PIN);
 
     multicore_launch_core1_with_stack(core1_main, (uint32_t *)0x20081400, 2*1024);
 
-    core0_main();
+    if (rev6)
+        core0_main_rev6();
+    else
+        core0_main_rev5();
 }

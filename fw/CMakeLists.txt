@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
-set(PICO_BOARD pico2)
+# Any board that uses the RP2350B will do here
+set(PICO_BOARD solderparty_rp2350_stamp_xl)
 
 include(pico_sdk_import.cmake)
 
