@@ -14,6 +14,10 @@
 #define DATA_MASK ((1 << 16) - 1)
 #define ADDR_MASK ((1 << 18) - 1)
 
+#define MAGIC_ADDR_0    0x104
+#define MAGIC_ADDR_1    0x894
+#define MAGIC_ADDR_2    0x7f4fe
+
 __attribute__((section(".rom_image")))
 static uint16_t rom_image[256 * 1024];
 
@@ -104,19 +108,19 @@ static void __not_in_flash_func(core1_main)()
 
         if (magic_counter == 0)
         {
-            if (address == (0x104 >> 1))
+            if (address == (MAGIC_ADDR_0 >> 1))
                 magic_counter++;
         }
         else if (magic_counter == 1)
         {
-            if (address == (0x894 >> 1))
+            if (address == (MAGIC_ADDR_1 >> 1))
                 magic_counter++;
             else
                 magic_counter = 0;
         }
         else if (magic_counter == 2)
         {
-            if (address == (0x7f4fe >> 1))
+            if (address == (MAGIC_ADDR_2 >> 1))
                 magic_counter++;
             else
                 magic_counter = 0;
