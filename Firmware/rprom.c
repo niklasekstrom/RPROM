@@ -7,9 +7,12 @@
 
 #include <string.h>
 
-#define BYTE_PIN 34
-#define CE_PIN 35
-#define OE_PIN 36
+// Pins 0..15 are 16 bit data bus
+// Pins 16..33 are 18 bit address bus
+#define BYTE_PIN    34
+#define CE_PIN      35
+#define OE_PIN      36
+#define KBRESET_PIN 37
 
 #define DATA_MASK ((1 << 16) - 1)
 #define ADDR_MASK ((1 << 18) - 1)
@@ -18,14 +21,36 @@
 #define MAGIC_ADDR_1    0x894
 #define MAGIC_ADDR_2    0x7f4fe
 
-__attribute__((section(".rom_image")))
-static uint16_t rom_image[256 * 1024];
+#define CMD_UPDATE_ACTIVE_ROM_SLOT      0
+#define CMD_WRITE_STATUS_TO_SRAM        1
+#define CMD_RESTORE_PAGE_TO_SRAM        2
+#define CMD_COPY_PAGE_AMIGA_TO_SRAM     3
+#define CMD_COPY_PAGE_FLASH_TO_SRAM     4
+#define CMD_COPY_PAGE_SRAM_TO_FLASH     5
+#define CMD_ERASE_FLASH_SECTOR          6
+
+#define MAJOR_VERSION 1
+#define MINOR_VERSION 0
+#define PATCH_VERSION 0
+
+// TODO: Decide on a final layout for this struct.
+struct StatusV1
+{
+    uint8_t status_length;
+    uint8_t major_version;
+    uint8_t minor_version;
+    uint8_t patch_version;
+    uint8_t flash_size_mb;
+    uint8_t active_rom_slot;
+};
 
 #define ROM_SLOT_SIZE (512 * 1024)
 
-#define CONFIG_SECTOR_OFFSET (ROM_SLOT_SIZE - FLASH_SECTOR_SIZE)
+__attribute__((section(".rom_image")))
+static uint16_t rom_image[ROM_SLOT_SIZE / 2];
 
-#define CONFIG_SECTOR_BASE (XIP_BASE + CONFIG_SECTOR_OFFSET)
+#define CONFIG_SECTOR_OFFSET    (ROM_SLOT_SIZE - FLASH_SECTOR_SIZE)
+#define CONFIG_SECTOR_BASE      (XIP_BASE + CONFIG_SECTOR_OFFSET)
 
 struct ConfigTuple
 {
@@ -88,14 +113,70 @@ static void update_active_rom_slot_in_flash(uint32_t rom_slot)
 
 static void handle_magic_read(uint32_t address)
 {
-    uint32_t rom_slot = address;
-    if (rom_slot == 0 || rom_slot >= 8)
-        return;
+    uint32_t cmd = address >> 14;
+    uint32_t arg = address & ((2 << 14) - 1);
 
-    update_active_rom_slot_in_flash(rom_slot);
+    switch (cmd)
+    {
+        case CMD_UPDATE_ACTIVE_ROM_SLOT:
+        {
+            uint32_t rom_slot = arg;
+            if (rom_slot == 0 || rom_slot > 7)
+                return;
 
-    uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
-    memcpy(rom_image, (const void *)rom_slot_base, sizeof(rom_image));
+            update_active_rom_slot_in_flash(rom_slot);
+
+            uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
+            memcpy(rom_image, (const void *)rom_slot_base, sizeof(rom_image));
+            break;
+        }
+        case CMD_WRITE_STATUS_TO_SRAM:
+        {
+            struct StatusV1 *status = (struct StatusV1 *)rom_image;
+            status->status_length = sizeof(struct StatusV1);
+            status->major_version = MAJOR_VERSION;
+            status->minor_version = MINOR_VERSION;
+            status->patch_version = PATCH_VERSION;
+            status->flash_size_mb = 4;
+            status->active_rom_slot = (uint8_t)get_active_rom_slot();
+            break;
+        }
+        case CMD_RESTORE_PAGE_TO_SRAM:
+        {
+            const uint32_t rom_slot = get_active_rom_slot();
+            const uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
+            memcpy(rom_image, (const void *)rom_slot_base, FLASH_PAGE_SIZE + 2);
+            break;
+        }
+        case CMD_COPY_PAGE_AMIGA_TO_SRAM:
+        {
+            for (int i = 0; i < 128; i++)
+                rom_image[i] = __builtin_bswap16((uint16_t)multicore_fifo_pop_blocking_inline());
+
+            break;
+        }
+        case CMD_COPY_PAGE_FLASH_TO_SRAM:
+        {
+            rom_image[128] = 0xffff;
+            memcpy(rom_image, (const void *)(XIP_BASE + arg * FLASH_PAGE_SIZE), FLASH_PAGE_SIZE);
+            rom_image[128] = 0;
+            break;
+        }
+        case CMD_COPY_PAGE_SRAM_TO_FLASH:
+        {
+            rom_image[128] = 0xffff;
+            flash_range_program(arg * FLASH_PAGE_SIZE, (const uint8_t *)rom_image, FLASH_PAGE_SIZE);
+            rom_image[128] = 0;
+            break;
+        }
+        case CMD_ERASE_FLASH_SECTOR:
+        {
+            rom_image[128] = 0xffff;
+            flash_range_erase(arg * FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
+            rom_image[128] = 0;
+            break;
+        }
+    }
 }
 
 static void __not_in_flash_func(core1_main)()
@@ -205,9 +286,9 @@ void __not_in_flash_func(main)()
 {
     set_sys_clock_khz(200000, false);
 
-    gpio_set_dir_in_masked64((1ULL << 37) - 1);
+    gpio_set_dir_in_masked64((1ULL << 40) - 1ULL);
 
-    for (uint i = 0; i <= OE_PIN; i++)
+    for (uint i = 0; i < 40; i++)
         gpio_set_function(i, GPIO_FUNC_SIO);
 
     gpio_pull_down(BYTE_PIN);
@@ -219,7 +300,7 @@ void __not_in_flash_func(main)()
     bool rev6 = gpio_get(BYTE_PIN);
     gpio_disable_pulls(BYTE_PIN);
 
-    multicore_launch_core1_with_stack(core1_main, (uint32_t *)0x20081400, 2*1024);
+    multicore_launch_core1(core1_main);
 
     if (rev6)
         core0_main_rev6();
