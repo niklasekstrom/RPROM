@@ -168,6 +168,9 @@ static void write_slot_command(uint32_t rom_slot, char *filename)
         return;
     }
 
+    // Always automatically erase slot before writing.
+    erase_slot_command(rom_slot);
+
     printf("Writing: [                ]\r"
            "Writing: [");
     fflush(stdout);
