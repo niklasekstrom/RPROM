@@ -9,7 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CIAA_BASE   0xbfe001
+#define CIAB_TODL   0xbfd800
+#define CIAB_TODM   0xbfd900
+#define CIAB_TODH   0xbfda00
 #define ROM_BASE    0xf80000
 
 #define CMD_UPDATE_ACTIVE_ROM_SLOT      0
@@ -22,13 +24,23 @@
 
 static uint16_t sector_buffer[4096 / 2];
 
-static void delay_us(int16_t us)
-{
-    volatile uint8_t *ciaa_pra = (volatile uint8_t *)CIAA_BASE;
-    uint8_t tmp;
+static uint32_t rom_slot_supervisor;
 
-    for (int16_t i = us - 1; i >= 0; i--)
-        tmp = *ciaa_pra;
+extern void reboot();
+
+static uint32_t get_hsync_tick_count()
+{
+    uint8_t h = *(volatile uint8_t*)CIAB_TODH;
+    uint8_t m = *(volatile uint8_t*)CIAB_TODM;
+    uint8_t l = *(volatile uint8_t*)CIAB_TODL;
+    return ((uint32_t)h << 16) | ((uint32_t)m << 8) | (uint32_t)l;
+}
+
+static void delay_hsync_ticks(int32_t ticks)
+{
+    uint32_t deadline = get_hsync_tick_count() + ticks;
+    while ((int32_t)(deadline - get_hsync_tick_count()) > 0)
+        ;
 }
 
 static void send_command(uint32_t cmd, uint32_t arg)
@@ -71,7 +83,7 @@ static void wait_operation_complete()
 
     do
     {
-        delay_us(10);
+        delay_hsync_ticks(2);
         tmp = rom[128];
     }
     while (tmp);
@@ -92,7 +104,7 @@ static void status_command()
 {
     Disable();
     send_command(CMD_WRITE_STATUS_TO_SRAM, 0);
-    delay_us(10);
+    delay_hsync_ticks(2);
     copy_sram_page_to_buf(sector_buffer);
     send_command(CMD_RESTORE_PAGE_TO_SRAM, 0);
     Enable();
@@ -112,16 +124,29 @@ static void status_command()
     printf("Active slot:      %u\n", (uint16_t)status->active_rom_slot);
 }
 
+// Must be run in supervisor mode because a combination of:
+// - The reset instruction in the reboot function requires supervisor mode
+// - After the ROM switch, no ROM code can be called, so supervisor mode
+//   must be entered by running exec.library/Supervisor() before the switch
+static void switch_rom_slot_command_and_reboot()
+{
+    send_command(CMD_UPDATE_ACTIVE_ROM_SLOT, rom_slot_supervisor);
+
+    // Wait for the RP2350 to copy the new kickstart to SRAM
+    delay_hsync_ticks(1000000 / 64); // 1 second, 64 us per tick
+
+    reboot();
+}
+
 static void switch_slot_command(uint32_t rom_slot)
 {
-    printf("Reset Amiga to boot to new kickstart\n");
+    printf("Rebooting Amiga with new kickstart\n");
 
     Disable();
 
-    send_command(CMD_UPDATE_ACTIVE_ROM_SLOT, rom_slot);
+    rom_slot_supervisor = rom_slot;
 
-    while (1)
-        delay_us(1);
+    Supervisor((void *)&switch_rom_slot_command_and_reboot);
 }
 
 static void erase_slot_command(uint32_t rom_slot)
