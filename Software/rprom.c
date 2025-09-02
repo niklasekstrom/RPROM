@@ -22,12 +22,16 @@
 
 static uint16_t sector_buffer[4096 / 2];
 
-static void delay_us(int16_t us)
+static uint32_t rom_slot_supervisor;
+
+extern void reboot();
+
+static void delay_us(int32_t us)
 {
     volatile uint8_t *ciaa_pra = (volatile uint8_t *)CIAA_BASE;
     uint8_t tmp;
 
-    for (int16_t i = us - 1; i >= 0; i--)
+    for (int32_t i = us - 1; i >= 0; i--)
         tmp = *ciaa_pra;
 }
 
@@ -112,16 +116,31 @@ static void status_command()
     printf("Active slot:      %u\n", (uint16_t)status->active_rom_slot);
 }
 
+// Must be run in supervisor mode because a combination of:
+// - The reset instruction in the reboot function requires supervisor mode
+// - After the ROM switch, no ROM code can be called, so supervisor mode
+//   must be entered by running exec.library/Supervisor() before the switch
+static void switch_rom_slot_command_and_reboot()
+{
+    send_command(CMD_UPDATE_ACTIVE_ROM_SLOT, rom_slot_supervisor);
+
+    // Wait for the RP2350 to copy the new kickstart to SRAM
+    delay_us(500000);
+
+    reboot();
+}
+
 static void switch_slot_command(uint32_t rom_slot)
 {
-    printf("Reset Amiga to boot to new kickstart\n");
+    printf("Rebooting Amiga with new kickstart\n");
+
+    delay_us(500000);
 
     Disable();
 
-    send_command(CMD_UPDATE_ACTIVE_ROM_SLOT, rom_slot);
+    rom_slot_supervisor = rom_slot;
 
-    while (1)
-        delay_us(1);
+    Supervisor((void *)&switch_rom_slot_command_and_reboot);
 }
 
 static void erase_slot_command(uint32_t rom_slot)
