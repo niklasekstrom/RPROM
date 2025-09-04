@@ -2,3 +2,9 @@ Firmware/build
 Firmware/build2
 Firmware/.vscode
 Software/.vscode
+Hardware/KiCad/bom
+Hardware/KiCad/gerbers
+Hardware/KiCad/out
+Hardware/KiCad/RPROM-backups
+Hardware/KiCad/fp-info-cache
+Hardware/KiCad/RPROM.kicad_prl
