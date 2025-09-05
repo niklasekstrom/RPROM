@@ -1,3 +1,8 @@
+/*
+ * RPROM firmware
+ *
+ * Copyright (C) 2025 Niklas Ekström
+ */
 #include "hardware/clocks.h"
 #include "hardware/flash.h"
 #include "hardware/gpio.h"
@@ -12,7 +17,7 @@
 #define BYTE_PIN    34
 #define CE_PIN      35
 #define OE_PIN      36
-#define KBRESET_PIN 37
+#define RESET_PIN   37
 
 #define DATA_MASK ((1 << 16) - 1)
 #define ADDR_MASK ((1 << 18) - 1)

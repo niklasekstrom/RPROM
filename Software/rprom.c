@@ -1,3 +1,8 @@
+/*
+ * RPROM command line utility
+ *
+ * Copyright (C) 2025 Niklas Ekström
+ */
 #include <proto/exec.h>
 
 #include <stdio.h>
