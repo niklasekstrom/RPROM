@@ -218,6 +218,7 @@ static void write_slot_command(uint32_t rom_slot, char *filename)
 
     printf( "]\n"
             "Wrote file %s to slot %lu\n", filename, rom_slot);
+    fclose(f);
 }
 
 static void read_slot_command(uint32_t rom_slot, char *filename)
@@ -272,6 +273,7 @@ static void read_slot_command(uint32_t rom_slot, char *filename)
 
     printf( "]\n"
             "Read slot %lu to file %s\n", rom_slot, filename);
+    fclose(f);
 }
 
 enum Command
