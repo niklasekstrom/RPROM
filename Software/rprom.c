@@ -26,12 +26,27 @@ static uint32_t rom_slot_supervisor;
 
 extern void reboot();
 
-static void delay_us(int32_t us)
+static uint32_t get_vsync_ticks()
+{
+    uint8_t h = *(volatile uint8_t*)(CIAA_BASE + 0xa00);
+    uint8_t m = *(volatile uint8_t*)(CIAA_BASE + 0x900);
+    uint8_t l = *(volatile uint8_t*)(CIAA_BASE + 0x800);
+    return ((uint32_t)h << 16) | ((uint32_t)m << 8) | (uint32_t)l;
+}
+
+static void delay_vsync_ticks(uint32_t ticks)
+{
+    uint32_t deadline = get_vsync_ticks() + ticks;
+    while (((deadline - get_vsync_ticks()) & (1 << 23)) == 0)
+        ;
+}
+
+static void delay_us(int16_t us)
 {
     volatile uint8_t *ciaa_pra = (volatile uint8_t *)CIAA_BASE;
     uint8_t tmp;
 
-    for (int32_t i = us - 1; i >= 0; i--)
+    for (int16_t i = us - 1; i >= 0; i--)
         tmp = *ciaa_pra;
 }
 
@@ -125,7 +140,7 @@ static void switch_rom_slot_command_and_reboot()
     send_command(CMD_UPDATE_ACTIVE_ROM_SLOT, rom_slot_supervisor);
 
     // Wait for the RP2350 to copy the new kickstart to SRAM
-    delay_us(500000);
+    delay_vsync_ticks(500 / 20); // 500 ms, 20 ms per tick
 
     reboot();
 }
@@ -134,7 +149,7 @@ static void switch_slot_command(uint32_t rom_slot)
 {
     printf("Rebooting Amiga with new kickstart\n");
 
-    delay_us(500000);
+    delay_vsync_ticks(500 / 20); // 500 ms, 20 ms per tick
 
     Disable();
 
