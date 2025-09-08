@@ -19,6 +19,30 @@ This repository contains the [hardware](Hardware), [firmware](Firmware) and
 understandable and hackable. For example, the firmware is built from a single,
 roughly 300 lines long, [source code file](Firmware/rprom.c).
 
+## Programming using USB
+
+Both the firmware and ROM images can be programmed from a PC using USB.
+Programming is done using the `picotool` program, which can be downloaded from
+https://github.com/raspberrypi/pico-sdk-tools/releases. The RP2350B
+microcontroller needs to first be in download mode. To put the RP2350B in
+download mode, hold down the BOOTSEL button on the board, and then click the
+RUN button. The microcontroller should show up as a USB drive on your PC.
+
+To program the firmware, run `picotool load rprom.uf2`.
+
+To write a ROM image to a slot, run `picotool load <image> -t bin -o <addr>`,
+where `<addr>` depends on the slot:
+
+- slot 1: `0x10080000`
+- slot 2: `0x10100000`
+- slot 3: `0x10180000`
+- slot 4: `0x10200000`
+- slot 5: `0x10280000`
+- slot 6: `0x10300000`
+- slot 7: `0x10380000`
+
+Note that the ROM image should *not* be byte swapped.
+
 ## Building
 
 The hardware can be cheaply built by [JLCPCB](https://jlcpcb.com/).
