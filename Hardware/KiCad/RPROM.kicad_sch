@@ -2141,7 +2141,7 @@
 				)
 			)
 		)
-		(symbol "Memory_Flash:W25Q32JVZP"
+		(symbol "RPROM:W25Q32RVXHJQ"
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -2153,7 +2153,7 @@
 					)
 				)
 			)
-			(property "Value" "W25Q32JVZP"
+			(property "Value" "W25Q32RVXHJQ"
 				(at 7.62 11.43 0)
 				(effects
 					(font
@@ -2161,7 +2161,7 @@
 					)
 				)
 			)
-			(property "Footprint" "Package_SON:WSON-8-1EP_6x5mm_P1.27mm_EP3.4x4.3mm"
+			(property "Footprint" "Package_SON:Winbond_USON-8-1EP_3x2mm_P0.5mm_EP0.2x1.6mm"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2170,7 +2170,7 @@
 					(hide yes)
 				)
 			)
-			(property "Datasheet" "http://www.winbond.com/resource-files/w25q32jv%20revg%2003272018%20plus.pdf"
+			(property "Datasheet" "https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q32RV"
 				(at 0 -2.54 0)
 				(effects
 					(font
@@ -2179,7 +2179,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "32Mb Serial Flash Memory, Standard/Dual/Quad SPI, DFN-8"
+			(property "Description" "NOR Flash spiFlash, 3V, 32M-bit, 4Kb Uniform Sector"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2188,25 +2188,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_keywords" "flash memory SPI"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "WSON*1EP*6x5mm*P1.27mm*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "W25Q32JVZP_0_1"
+			(symbol "W25Q32RVXHJQ_0_1"
 				(rectangle
 					(start -7.62 10.16)
 					(end 7.62 -10.16)
@@ -2219,7 +2201,7 @@
 					)
 				)
 			)
-			(symbol "W25Q32JVZP_1_1"
+			(symbol "W25Q32RVXHJQ_1_1"
 				(pin input line
 					(at -10.16 7.62 0)
 					(length 2.54)
@@ -11792,7 +11774,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Memory_Flash:W25Q32JVZP")
+		(lib_id "RPROM:W25Q32RVXHJQ")
 		(at 67.31 189.23 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -11810,7 +11792,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "W25Q32JVZP"
+		(property "Value" "W25Q32RVXHJQ"
 			(at 76.2 190.4999 0)
 			(effects
 				(font
@@ -11828,7 +11810,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "http://www.winbond.com/resource-files/w25q32jv%20revg%2003272018%20plus.pdf"
+		(property "Datasheet" "https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q32RV"
 			(at 67.31 191.77 0)
 			(effects
 				(font
@@ -11837,7 +11819,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "32Mb Serial Flash Memory, Standard/Dual/Quad SPI, DFN-8"
+		(property "Description" "NOR Flash spiFlash, 3V, 32M-bit, 4Kb Uniform Sector"
 			(at 67.31 189.23 0)
 			(effects
 				(font

@@ -9632,7 +9632,7 @@
 				)
 			)
 		)
-		(property "Value" "W25Q32JVZP"
+		(property "Value" "W25Q32RVXHJQ"
 			(at 0 1.95 90)
 			(layer "F.Fab")
 			(uuid "43fa03a6-0d2d-4a64-ae28-6f1dddc87521")
@@ -9655,7 +9655,7 @@
 				)
 			)
 		)
-		(property "Datasheet" "http://www.winbond.com/resource-files/w25q32jv%20revg%2003272018%20plus.pdf"
+		(property "Datasheet" "https://www.winbond.com/hq/product/code-storage-flash-memory/serial-nor-flash/?__locale=en&partNo=W25Q32RV"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -9667,7 +9667,7 @@
 				)
 			)
 		)
-		(property "Description" "32Mb Serial Flash Memory, Standard/Dual/Quad SPI, DFN-8"
+		(property "Description" "NOR Flash spiFlash, 3V, 32M-bit, 4Kb Uniform Sector"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -9679,7 +9679,6 @@
 				)
 			)
 		)
-		(property ki_fp_filters "WSON*1EP*6x5mm*P1.27mm*")
 		(path "/48176749-d8d1-4aa2-8b5d-640fc08e73ac")
 		(sheetname "Root")
 		(sheetfile "RPROM.kicad_sch")
