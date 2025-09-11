@@ -5,6 +5,10 @@
 RPROM is a ROM emulator for 16 bit Amiga computers (A500, A600, A2000) based on
 the RP2350B microcontroller.
 
+RPROM was developed in collaboration by
+[Niklas Ekström](https://github.com/niklasekstrom/) and
+[Per Bengtsson](https://github.com/RetroNynjah).
+
 The RPROM board has a 4 MB SPI flash memory. Each ROM image is 512 kB in size,
 and therefore the 4 MB is divided into 8 *slots* of 512 kB each. The first slot
 is dedicated to store code and configuration data for the RP2350B. The seven
