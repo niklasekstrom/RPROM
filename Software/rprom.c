@@ -315,9 +315,9 @@ enum Command
     ACMD_UNKNOWN,
     ACMD_STATUS,
     ACMD_SWITCH,
-    ACMD_ERASE,
     ACMD_WRITE,
     ACMD_READ,
+    ACMD_ERASE,
 };
 
 static enum Command parse_command(char *cmd)
@@ -326,12 +326,12 @@ static enum Command parse_command(char *cmd)
         return ACMD_STATUS;
     else if (strcmp(cmd, "switch") == 0)
         return ACMD_SWITCH;
-    else if (strcmp(cmd, "erase") == 0)
-        return ACMD_ERASE;
     else if (strcmp(cmd, "write") == 0)
         return ACMD_WRITE;
     else if (strcmp(cmd, "read") == 0)
         return ACMD_READ;
+    else if (strcmp(cmd, "erase") == 0)
+        return ACMD_ERASE;
     else
         return ACMD_UNKNOWN;
 }
@@ -342,9 +342,9 @@ static void print_usage()
             "  where command is one of:\n"
             "    status\n"
             "    switch <slot>\n"
-            "    erase <slot>\n"
             "    write <slot> <file>\n"
-            "    read <slot> <file>\n");
+            "    read <slot> <file>\n"
+            "    erase <slot>\n");
 }
 
 int main(int argc, char **argv)
@@ -366,7 +366,7 @@ int main(int argc, char **argv)
 
     uint32_t rom_slot = 0;
 
-    if (cmd == ACMD_SWITCH || cmd == ACMD_ERASE || cmd == ACMD_WRITE || cmd == ACMD_READ)
+    if (cmd == ACMD_SWITCH || cmd == ACMD_WRITE || cmd == ACMD_READ || cmd == ACMD_ERASE)
     {
         if (argc < 3)
         {
@@ -402,12 +402,12 @@ int main(int argc, char **argv)
         status_command();
     else if (cmd == ACMD_SWITCH)
         switch_slot_command(rom_slot);
-    else if (cmd == ACMD_ERASE)
-        erase_slot_command(rom_slot);
     else if (cmd == ACMD_WRITE)
         write_slot_command(rom_slot, filename);
     else if (cmd == ACMD_READ)
         read_slot_command(rom_slot, filename);
+    else if (cmd == ACMD_ERASE)
+        erase_slot_command(rom_slot);
 
     return 0;
 }
