@@ -3,16 +3,14 @@
 ![RPROM rendered](Docs/Images/rprom-rendered.jpg)
 
 RPROM is a ROM emulator for 16 bit Amiga computers (A500, A600, A2000) based on
-the RP2350B microcontroller.
-
-RPROM was developed in collaboration by
+the RP2350B microcontroller. RPROM was designed in collaboration by
 [Niklas Ekström](https://github.com/niklasekstrom/) and
 [Per Bengtsson](https://github.com/RetroNynjah).
 
 The RPROM board has a 4 MB SPI flash memory. Each ROM image is 512 kB in size,
-and therefore the 4 MB is divided into 8 *slots* of 512 kB each. The first slot
-is dedicated to store code and configuration data for the RP2350B. The seven
-remaining slots are used to store ROM images.
+and therefore the 4 MB is divided into eight *slots* of 512 kB each. The first
+slot is dedicated to store code and configuration data for the RP2350B. The
+seven remaining slots are used to store ROM images.
 
 ROM images can be written to flash memory either via USB, or directly from the
 Amiga using a program called `RPROM`. This `RPROM` program is also used to
@@ -22,6 +20,21 @@ This repository contains the [hardware](Hardware), [firmware](Firmware) and
 [software](Software) for RPROM. The design is intended to be easily
 understandable and hackable. For example, the firmware is built from a single,
 roughly 300 lines long, [source code file](Firmware/rprom.c).
+
+## The RPROM command
+
+`RPROM` is a CLI command that runs on the Amiga. It has the following
+subcommands:
+
+- `RPROM status` prints status information about the device
+- `RPROM switch <slot>` switches the active slot and reboots the Amiga
+- `RPROM write <slot> <image>` writes the content of file `<image>` to
+slot `<slot>`
+- `RPROM read <slot> <image>` reads the content of slot `<slot>` and saves it
+to file `<image>`
+- `RPROM erase <slot>` erases slot `<slot>`
+
+Note that ROM images should *not* be byte swapped.
 
 ## Programming using USB
 
@@ -44,8 +57,6 @@ where `<addr>` depends on the slot:
 - slot 5: `0x10280000`
 - slot 6: `0x10300000`
 - slot 7: `0x10380000`
-
-Note that the ROM image should *not* be byte swapped.
 
 ## License
 
