@@ -12,6 +12,8 @@
 
 #include <string.h>
 
+#include "protocol.h"
+
 // Pins 0..15 are 16 bit data bus
 // Pins 16..33 are 18 bit address bus
 #define BYTE_PIN    34
@@ -21,31 +23,6 @@
 
 #define DATA_MASK ((1 << 16) - 1)
 #define ADDR_MASK ((1 << 18) - 1)
-
-#define MAGIC_ADDR_0    0x104
-#define MAGIC_ADDR_1    0x894
-#define MAGIC_ADDR_2    0x7f4fe
-
-#define CMD_UPDATE_ACTIVE_ROM_SLOT      0
-#define CMD_WRITE_STATUS_TO_SRAM        1
-#define CMD_RESTORE_PAGE_TO_SRAM        2
-#define CMD_COPY_PAGE_AMIGA_TO_SRAM     3
-#define CMD_COPY_PAGE_FLASH_TO_SRAM     4
-#define CMD_COPY_PAGE_SRAM_TO_FLASH     5
-#define CMD_ERASE_FLASH_SECTOR          6
-
-struct StatusV1
-{
-    uint8_t magic[4];
-    uint8_t status_length;
-    uint8_t major_version;
-    uint8_t minor_version;
-    uint8_t patch_version;
-    uint8_t flash_size_mb;
-    uint8_t active_rom_slot;
-};
-
-#define STATUS_V1_MAGIC "RPRM"
 
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 0
@@ -199,19 +176,19 @@ static void __not_in_flash_func(core1_main)()
 
         if (magic_counter == 0)
         {
-            if (address == (MAGIC_ADDR_0 >> 1))
+            if (address == MAGIC_ADDR_0)
                 magic_counter++;
         }
         else if (magic_counter == 1)
         {
-            if (address == (MAGIC_ADDR_1 >> 1))
+            if (address == MAGIC_ADDR_1)
                 magic_counter++;
             else
                 magic_counter = 0;
         }
         else if (magic_counter == 2)
         {
-            if (address == (MAGIC_ADDR_2 >> 1))
+            if (address == MAGIC_ADDR_2)
                 magic_counter++;
             else
                 magic_counter = 0;

@@ -9,29 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../Firmware/protocol.h"
+
 #define CIAA_BASE   0xbfe001
 #define ROM_BASE    0xf80000
-
-#define CMD_UPDATE_ACTIVE_ROM_SLOT      0
-#define CMD_WRITE_STATUS_TO_SRAM        1
-#define CMD_RESTORE_PAGE_TO_SRAM        2
-#define CMD_COPY_PAGE_AMIGA_TO_SRAM     3
-#define CMD_COPY_PAGE_FLASH_TO_SRAM     4
-#define CMD_COPY_PAGE_SRAM_TO_FLASH     5
-#define CMD_ERASE_FLASH_SECTOR          6
-
-struct StatusV1
-{
-    uint8_t magic[4];
-    uint8_t status_length;
-    uint8_t major_version;
-    uint8_t minor_version;
-    uint8_t patch_version;
-    uint8_t flash_size_mb;
-    uint8_t active_rom_slot;
-};
-
-#define STATUS_V1_MAGIC "RPRM"
 
 static uint16_t sector_buffer[4096 / 2];
 
@@ -70,9 +51,9 @@ static void send_command(uint32_t cmd, uint32_t arg)
 
     uint32_t offset = ((cmd & 0xf) << 14) | (arg & 0x3fff);
 
-    tmp = rom[0x104 >> 1];
-    tmp = rom[0x894 >> 1];
-    tmp = rom[0x7f4fe >> 1];
+    tmp = rom[MAGIC_ADDR_0];
+    tmp = rom[MAGIC_ADDR_1];
+    tmp = rom[MAGIC_ADDR_2];
     tmp = rom[offset];
 }
 
