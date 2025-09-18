@@ -34,13 +34,9 @@
 #define CMD_COPY_PAGE_SRAM_TO_FLASH     5
 #define CMD_ERASE_FLASH_SECTOR          6
 
-#define MAJOR_VERSION 1
-#define MINOR_VERSION 0
-#define PATCH_VERSION 0
-
-// TODO: Decide on a final layout for this struct.
 struct StatusV1
 {
+    uint8_t magic[4];
     uint8_t status_length;
     uint8_t major_version;
     uint8_t minor_version;
@@ -48,6 +44,12 @@ struct StatusV1
     uint8_t flash_size_mb;
     uint8_t active_rom_slot;
 };
+
+#define STATUS_V1_MAGIC "RPRM"
+
+#define MAJOR_VERSION 1
+#define MINOR_VERSION 0
+#define PATCH_VERSION 0
 
 #define ROM_SLOT_SIZE (512 * 1024)
 
@@ -138,12 +140,15 @@ static void handle_magic_read(uint32_t address)
         case CMD_WRITE_STATUS_TO_SRAM:
         {
             struct StatusV1 *status = (struct StatusV1 *)rom_image;
-            status->status_length = sizeof(struct StatusV1);
-            status->major_version = MAJOR_VERSION;
-            status->minor_version = MINOR_VERSION;
-            status->patch_version = PATCH_VERSION;
-            status->flash_size_mb = 4;
-            status->active_rom_slot = (uint8_t)get_active_rom_slot();
+            *status = (struct StatusV1) {
+                .magic = STATUS_V1_MAGIC,
+                .status_length = sizeof(struct StatusV1),
+                .major_version = MAJOR_VERSION,
+                .minor_version = MINOR_VERSION,
+                .patch_version = PATCH_VERSION,
+                .flash_size_mb = 4,
+                .active_rom_slot = (uint8_t)get_active_rom_slot(),
+            };
             break;
         }
         case CMD_RESTORE_PAGE_TO_SRAM:

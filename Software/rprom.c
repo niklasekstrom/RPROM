@@ -20,6 +20,19 @@
 #define CMD_COPY_PAGE_SRAM_TO_FLASH     5
 #define CMD_ERASE_FLASH_SECTOR          6
 
+struct StatusV1
+{
+    uint8_t magic[4];
+    uint8_t status_length;
+    uint8_t major_version;
+    uint8_t minor_version;
+    uint8_t patch_version;
+    uint8_t flash_size_mb;
+    uint8_t active_rom_slot;
+};
+
+#define STATUS_V1_MAGIC "RPRM"
+
 static uint16_t sector_buffer[4096 / 2];
 
 static uint32_t rom_slot_supervisor;
@@ -96,16 +109,18 @@ static void wait_operation_complete()
     while (tmp);
 }
 
-// TODO: Decide on a final layout for this struct.
-struct StatusV1
+static uint8_t *magic_str(uint8_t *magic)
 {
-    uint8_t status_length;
-    uint8_t major_version;
-    uint8_t minor_version;
-    uint8_t patch_version;
-    uint8_t flash_size_mb;
-    uint8_t active_rom_slot;
-};
+    static uint8_t out[8];
+    uint8_t *p = out;
+    for (int i = 0; i < 4; i++)
+    {
+        uint8_t c = magic[i];
+        *p++ = (c >= ' ' && c < 0x80) ? c : '.';
+    }
+    *p++ = 0;
+    return out;
+}
 
 static void status_command()
 {
@@ -117,6 +132,12 @@ static void status_command()
     Enable();
 
     struct StatusV1 *status = (struct StatusV1 *)sector_buffer;
+
+    if (memcmp(status->magic, STATUS_V1_MAGIC, sizeof(status->magic)) != 0)
+    {
+        printf("Warning: Unexpected status magic, read %s, expected %s\n",
+            magic_str(status->magic), STATUS_V1_MAGIC);
+    }
 
     if (status->status_length != sizeof(struct StatusV1))
     {
