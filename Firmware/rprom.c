@@ -14,6 +14,11 @@
 
 #include "protocol.h"
 
+static uint8_t recovery_switcher[] =
+{
+#include "../RecoverySwitcher/recovery_switcher.h"
+};
+
 // Pins 0..15 are 16 bit data bus
 // Pins 16..33 are 18 bit address bus
 #define BYTE_PIN    34
@@ -256,6 +261,8 @@ void __not_in_flash_func(main)()
     const uint32_t rom_slot = get_active_rom_slot();
     const uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
     memcpy(rom_image, (const void *)rom_slot_base, sizeof(rom_image));
+
+    memcpy(rom_image, recovery_switcher, sizeof(recovery_switcher));
 
     bool rev6 = gpio_get(BYTE_PIN);
     gpio_disable_pulls(BYTE_PIN);

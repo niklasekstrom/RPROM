@@ -8,3 +8,5 @@ Hardware/KiCad/out
 Hardware/KiCad/RPROM-backups
 Hardware/KiCad/fp-info-cache
 Hardware/KiCad/RPROM.kicad_prl
+RecoverySwitcher/.vscode
+RecoverySwitcher/recovery_switcher.h
