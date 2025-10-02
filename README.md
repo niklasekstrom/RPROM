@@ -1,6 +1,6 @@
 # RPROM
 
-![RPROM rendered](Docs/Images/rprom-rendered.jpg)
+![RPROM rendered](Docs/Images/rprom-installed.jpg)
 
 RPROM is a ROM emulator for 16 bit Amiga computers (A500, A600, A2000) based on
 the RP2350B microcontroller. RPROM was designed in collaboration by
