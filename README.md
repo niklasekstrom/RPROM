@@ -89,7 +89,9 @@ build boards to sell then you need to first ask for approval from the designers.
 
 ## Building
 
-The hardware can be cheaply built by [JLCPCB](https://jlcpcb.com/).
+The hardware can be cheaply built by [JLCPCB](https://jlcpcb.com/) using
+Economic PCBA. Components should be assembled only on the top side, and select
+that tooling holes are "Added by Customer".
 
 Please pay attention to the orientation of the components if ordering assembly
 from JLCPCB. Especially pay attention to the orientation of coil L1. When
