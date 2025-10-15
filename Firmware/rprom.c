@@ -6,6 +6,7 @@
 #include "hardware/clocks.h"
 #include "hardware/flash.h"
 #include "hardware/gpio.h"
+#include "hardware/timer.h"
 
 #include "pico/flash.h"
 #include "pico/multicore.h"
@@ -21,12 +22,15 @@
 #define OE_PIN      36
 #define RESET_PIN   37
 
+#define CORE1_RESET_CMD         0x80000001
+#define CYCLE_SLOT_TIMEOUT_US   3000000 // 3 seconds
+
 #define DATA_MASK ((1 << 16) - 1)
 #define ADDR_MASK ((1 << 18) - 1)
 
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 0
-#define PATCH_VERSION 1
+#define PATCH_VERSION 2
 
 #define ROM_SLOT_SIZE (512 * 1024)
 
@@ -93,6 +97,32 @@ static void update_active_rom_slot_in_flash(uint32_t rom_slot)
         page.pages_bitmap = ~((1 << active_page) - 1);
         flash_range_program(CONFIG_SECTOR_OFFSET, (const uint8_t *)&page, FLASH_PAGE_SIZE);
     }
+}
+
+static void cycle_active_rom_slot()
+{
+    uint32_t prev_rom_slot = get_active_rom_slot();
+    uint32_t rom_slot = prev_rom_slot;
+
+    while (1)
+    {
+        rom_slot++;
+        if (rom_slot == 8)
+            rom_slot = 1;
+
+        if (rom_slot == prev_rom_slot)
+            return;
+
+        // Check if this looks like a valid rom image.
+        uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
+        if (*(uint8_t *)rom_slot_base == 0x11)
+            break;
+    }
+
+    update_active_rom_slot_in_flash(rom_slot);
+
+    uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
+    memcpy(rom_image, (const void *)rom_slot_base, sizeof(rom_image));
 }
 
 static void handle_magic_read(uint32_t address)
@@ -174,7 +204,29 @@ static void __not_in_flash_func(core1_main)()
     {
         uint32_t address = multicore_fifo_pop_blocking_inline();
 
-        if (magic_counter == 0)
+        if (address == CORE1_RESET_CMD)
+        {
+            gpio_set_dir_in_masked(DATA_MASK);
+
+            uint32_t reset_started = time_us_32();
+
+            while (!multicore_fifo_rvalid())
+            {
+                int32_t elapsed = time_us_32() - reset_started;
+                if (elapsed >= CYCLE_SLOT_TIMEOUT_US)
+                {
+                    gpio_put(RESET_PIN, false);
+                    gpio_set_dir(RESET_PIN, true);
+
+                    cycle_active_rom_slot();
+
+                    gpio_set_dir(RESET_PIN, false);
+
+                    reset_started = time_us_32();
+                }
+            }
+        }
+        else if (magic_counter == 0)
         {
             if (address == MAGIC_ADDR_0)
                 magic_counter++;
@@ -239,6 +291,15 @@ static void __not_in_flash_func(core0_main)(bool rev6)
 
             gpio_set_dir_in_masked(DATA_MASK);
         }
+        else if ((all_pins & (1ULL << RESET_PIN)) == 0)
+        {
+            multicore_fifo_push_non_blocking_inline(CORE1_RESET_CMD);
+
+            while (gpio_get(RESET_PIN) == 0)
+            {
+                tight_loop_contents();
+            }
+        }
     }
 }
 
@@ -259,6 +320,8 @@ void __not_in_flash_func(main)()
 
     bool rev6 = gpio_get(BYTE_PIN);
     gpio_disable_pulls(BYTE_PIN);
+
+    gpio_pull_up(RESET_PIN);
 
     multicore_launch_core1(core1_main);
 
