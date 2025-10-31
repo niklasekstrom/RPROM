@@ -14,6 +14,9 @@
 #define CIAA_BASE   0xbfe001
 #define ROM_BASE    0xf80000
 
+// The year 125 is relative to 1900, which is expected by the version command.
+const char version_string[] = "$VER: RPROM 1.0 (31.10.125)";
+
 static uint16_t sector_buffer[4096 / 2];
 
 static uint32_t rom_slot_supervisor;
