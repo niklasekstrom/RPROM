@@ -4,6 +4,7 @@
  * Copyright (C) 2025 Niklas Ekström
  */
 #include <proto/exec.h>
+#include <dos/dos.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -192,13 +193,13 @@ static void erase_slot_command(uint32_t rom_slot)
             "Erased slot %lu\n", rom_slot);
 }
 
-static void write_slot_command(uint32_t rom_slot, char *filename)
+static int write_slot_command(uint32_t rom_slot, char *filename)
 {
     FILE *f = fopen(filename, "rb");
     if (!f)
     {
         printf("Error: Could not open file %s\n", filename);
-        return;
+        return RETURN_ERROR;
     }
 
     fseek(f, 0, SEEK_END);
@@ -209,7 +210,7 @@ static void write_slot_command(uint32_t rom_slot, char *filename)
     {
         printf("Error: File size must be exactly 512 kB\n");
         fclose(f);
-        return;
+        return RETURN_WARN;
     }
 
     // Always automatically erase slot before writing.
@@ -227,7 +228,7 @@ static void write_slot_command(uint32_t rom_slot, char *filename)
         {
             printf("\nError: Could not read enough data from file\n");
             fclose(f);
-            return;
+            return RETURN_FAIL;
         }
 
         Disable();
@@ -258,15 +259,16 @@ static void write_slot_command(uint32_t rom_slot, char *filename)
     printf( "]\n"
             "Wrote file %s to slot %lu\n", filename, rom_slot);
     fclose(f);
+    return RETURN_OK;
 }
 
-static void read_slot_command(uint32_t rom_slot, char *filename)
+static int read_slot_command(uint32_t rom_slot, char *filename)
 {
     FILE *f = fopen(filename, "wb");
     if (!f)
     {
         printf("Error: Could not open file %s\n", filename);
-        return;
+        return RETURN_ERROR;
     }
 
     printf("Reading: [                ]\r"
@@ -296,7 +298,7 @@ static void read_slot_command(uint32_t rom_slot, char *filename)
         {
             printf("\nError: Could not write enough data to file\n");
             fclose(f);
-            return;
+            return RETURN_FAIL;
         }
 
         if ((sector_offset & 7) == 7)
@@ -313,6 +315,7 @@ static void read_slot_command(uint32_t rom_slot, char *filename)
     printf( "]\n"
             "Read slot %lu to file %s\n", rom_slot, filename);
     fclose(f);
+    return RETURN_OK;
 }
 
 enum Command
@@ -357,7 +360,7 @@ int main(int argc, char **argv)
     if (argc < 2)
     {
         print_usage();
-        return 0;
+        return RETURN_OK;
     }
 
     char *cmd_str = argv[1];
@@ -366,7 +369,7 @@ int main(int argc, char **argv)
     {
         printf("Error: Unknown command %s\n\n", cmd_str);
         print_usage();
-        return 0;
+        return RETURN_WARN;
     }
 
     uint32_t rom_slot = 0;
@@ -377,7 +380,7 @@ int main(int argc, char **argv)
         {
             printf("Error: Missing slot argument\n\n");
             print_usage();
-            return 0;
+            return RETURN_WARN;
         }
 
         rom_slot = atoi(argv[2]);
@@ -385,7 +388,7 @@ int main(int argc, char **argv)
         if (rom_slot < 1 || rom_slot > 7)
         {
             printf("Error: slot must be between 1 and 7\n");
-            return 0;
+            return RETURN_WARN;
         }
     }
 
@@ -397,7 +400,7 @@ int main(int argc, char **argv)
         {
             printf("Error: Missing file argument\n\n");
             print_usage();
-            return 0;
+            return RETURN_WARN;
         }
 
         filename = argv[3];
@@ -408,11 +411,11 @@ int main(int argc, char **argv)
     else if (cmd == ACMD_SWITCH)
         switch_slot_command(rom_slot);
     else if (cmd == ACMD_WRITE)
-        write_slot_command(rom_slot, filename);
+        return write_slot_command(rom_slot, filename);
     else if (cmd == ACMD_READ)
-        read_slot_command(rom_slot, filename);
+        return read_slot_command(rom_slot, filename);
     else if (cmd == ACMD_ERASE)
         erase_slot_command(rom_slot);
 
-    return 0;
+    return RETURN_OK;
 }
