@@ -26,7 +26,7 @@
 
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 0
-#define PATCH_VERSION 0
+#define PATCH_VERSION 1
 
 #define ROM_SLOT_SIZE (512 * 1024)
 
@@ -206,65 +206,38 @@ static inline void multicore_fifo_push_non_blocking_inline(uint32_t data) {
     __sev();
 }
 
-static void __not_in_flash_func(core0_main_rev6)()
+static void __not_in_flash_func(core0_main)(bool rev6)
 {
-    uint32_t triggered = 0;
-
     while (1)
     {
         uint64_t all_pins = gpio_get_all64();
 
         if ((all_pins & (1ULL << OE_PIN)) == 0)
         {
-            uint32_t address = (all_pins >> 16) & ADDR_MASK;
+            uint32_t address;
+            if (rev6)
+            {
+                address = (all_pins >> 16) & ADDR_MASK;
+            }
+            else
+            {
+                address = (all_pins >> 16) & ((1 << 17) - 1);
+                address |= (all_pins >> (BYTE_PIN - 17)) & (1 << 17);
+            }
 
             uint32_t value = (uint32_t)__builtin_bswap16(rom_image[address]);
 
             gpio_put_masked(DATA_MASK, value);
             gpio_set_dir_out_masked(DATA_MASK);
 
-            if (!triggered)
+            multicore_fifo_push_non_blocking_inline(address);
+
+            while (gpio_get(OE_PIN) == 0)
             {
-                multicore_fifo_push_non_blocking_inline(address);
-                triggered = 1;
+                tight_loop_contents();
             }
-        }
-        else
-        {
+
             gpio_set_dir_in_masked(DATA_MASK);
-            triggered = 0;
-        }
-    }
-}
-
-static void __not_in_flash_func(core0_main_rev5)()
-{
-    uint32_t triggered = 0;
-
-    while (1)
-    {
-        uint64_t all_pins = gpio_get_all64();
-
-        if ((all_pins & (1ULL << OE_PIN)) == 0)
-        {
-            uint32_t address = (all_pins >> 16) & ((1 << 17) - 1);
-            address |= (all_pins >> (BYTE_PIN - 17)) & (1 << 17);
-
-            uint32_t value = (uint32_t)__builtin_bswap16(rom_image[address]);
-
-            gpio_put_masked(DATA_MASK, value);
-            gpio_set_dir_out_masked(DATA_MASK);
-
-            if (!triggered)
-            {
-                multicore_fifo_push_non_blocking_inline(address);
-                triggered = 1;
-            }
-        }
-        else
-        {
-            gpio_set_dir_in_masked(DATA_MASK);
-            triggered = 0;
         }
     }
 }
@@ -289,8 +262,5 @@ void __not_in_flash_func(main)()
 
     multicore_launch_core1(core1_main);
 
-    if (rev6)
-        core0_main_rev6();
-    else
-        core0_main_rev5();
+    core0_main(rev6);
 }
