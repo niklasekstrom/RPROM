@@ -26,9 +26,11 @@
 
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 0
-#define PATCH_VERSION 1
+#define PATCH_VERSION 2
 
 #define ROM_SLOT_SIZE (512 * 1024)
+
+#define HOLD_RESET_TRIGGER 4000000ULL // 4 Seconds .. trigger update on reset hold
 
 __attribute__((section(".rom_image")))
 static uint16_t rom_image[ROM_SLOT_SIZE / 2];
@@ -93,6 +95,17 @@ static void update_active_rom_slot_in_flash(uint32_t rom_slot)
         page.pages_bitmap = ~((1 << active_page) - 1);
         flash_range_program(CONFIG_SECTOR_OFFSET, (const uint8_t *)&page, FLASH_PAGE_SIZE);
     }
+}
+
+static void __not_in_flash_func(update_by_reset_hold)()
+{
+    uint32_t current = get_active_rom_slot();
+    uint32_t next = (current >= 7) ? 1 : current + 1;
+
+    update_active_rom_slot_in_flash(next);
+
+    const uint32_t rom_slot_base = XIP_BASE + next * ROM_SLOT_SIZE;
+    memcpy(rom_image, (const void *)rom_slot_base, sizeof(rom_image));
 }
 
 static void handle_magic_read(uint32_t address)
@@ -208,9 +221,35 @@ static inline void multicore_fifo_push_non_blocking_inline(uint32_t data) {
 
 static void __not_in_flash_func(core0_main)(bool rev6)
 {
+
+    // Variables for RESET_PIN monitoring
+    uint64_t reset_low_since_us = 0;
+    uint8_t reset_action_done = 0;
+    
     while (1)
     {
         uint64_t all_pins = gpio_get_all64();
+
+        // Monitor RESET_PIN (active low). Must be continuously low for HOLD_RESET_TRIGGER seconds.
+        if ((all_pins & (1ULL << RESET_PIN)) == 0)
+        {
+            if (reset_low_since_us == 0)
+                reset_low_since_us = time_us_64();
+
+            else if (!reset_action_done && (time_us_64() - reset_low_since_us) >= HOLD_RESET_TRIGGER)
+            {
+                // Trigger action once for this low period
+                update_by_reset_hold();
+                reset_action_done = 1;
+            }
+        }
+        else
+        {
+            // Released: reset timers so future holds will retrigger
+            reset_low_since_us = 0;
+            reset_action_done = 0;
+        }
+       
 
         if ((all_pins & (1ULL << OE_PIN)) == 0)
         {
@@ -252,6 +291,7 @@ void __not_in_flash_func(main)()
         gpio_set_function(i, GPIO_FUNC_SIO);
 
     gpio_pull_down(BYTE_PIN);
+    gpio_pull_up(RESET_PIN);      // RESET_PIN is active low
 
     const uint32_t rom_slot = get_active_rom_slot();
     const uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
