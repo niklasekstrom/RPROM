@@ -5,9 +5,6 @@ MAGIC_ADDR_2    equ     $3fa7f*2
 CMD_UPDATE_ACTIVE_ROM_SLOT      equ     0
 CMD_RESTORE_PAGE_TO_SRAM        equ     2
 
-MAGIC_ROMEND    equ     $01000000
-MAGIC_SIZEOFFS  equ     -$14
-
                 code
 
 ResetSP:        dc.l    128*1024
@@ -50,10 +47,7 @@ BootActive:     move.l  #(CMD_RESTORE_PAGE_TO_SRAM<<14),d0
 .Loop:          move.b  (a1),d1
                 dbf     d0,.Loop
 
-Reboot:         lea.l   MAGIC_ROMEND,a0
-                sub.l   MAGIC_SIZEOFFS(a0),a0
-                move.l  4(a0),a0
-                subq.l  #2,a0
+Reboot:         move.l  4(a0),a0
                 cnop    0,4
                 reset
                 jmp     (a0)
