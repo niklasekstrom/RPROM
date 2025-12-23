@@ -98,7 +98,7 @@ static void update_active_rom_slot_in_flash(uint32_t rom_slot)
 static void handle_magic_read(uint32_t address)
 {
     uint32_t cmd = address >> 14;
-    uint32_t arg = address & ((2 << 14) - 1);
+    uint32_t arg = address & ((1 << 14) - 1);
 
     switch (cmd)
     {
