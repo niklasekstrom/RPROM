@@ -40,4 +40,5 @@ target_link_libraries(rprom
   pico_stdlib
   pico_multicore
   hardware_flash
+  hardware_pio
 )
