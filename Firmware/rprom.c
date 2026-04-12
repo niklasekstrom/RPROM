@@ -31,9 +31,11 @@
 #define ADDRESS_PIO     pio1
 #define ADDRESS_SM      1
 
+#define CYCLE_SLOT_TIMEOUT_US   3000000 // 3 seconds
+
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   1
-#define PATCH_VERSION   0
+#define PATCH_VERSION   1
 
 #define ROM_SLOT_SIZE   (512 * 1024)
 
@@ -100,6 +102,32 @@ static void update_active_rom_slot_in_flash(uint32_t rom_slot)
         page.pages_bitmap = ~((1 << active_page) - 1);
         flash_range_program(CONFIG_SECTOR_OFFSET, (const uint8_t *)&page, FLASH_PAGE_SIZE);
     }
+}
+
+static void cycle_active_rom_slot()
+{
+    uint32_t prev_rom_slot = get_active_rom_slot();
+    uint32_t rom_slot = prev_rom_slot;
+
+    while (1)
+    {
+        rom_slot++;
+        if (rom_slot == 8)
+            rom_slot = 1;
+
+        if (rom_slot == prev_rom_slot)
+            return;
+
+        // Check if this looks like a valid rom image.
+        uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
+        if (*(uint8_t *)rom_slot_base == 0x11)
+            break;
+    }
+
+    update_active_rom_slot_in_flash(rom_slot);
+
+    uint32_t rom_slot_base = XIP_BASE + rom_slot * ROM_SLOT_SIZE;
+    memcpy(rom_image, (const void *)rom_slot_base, sizeof(rom_image));
 }
 
 static void handle_magic_read(uint32_t address)
@@ -211,6 +239,26 @@ static void __not_in_flash_func(core1_main)()
             {
                 handle_magic_read(address);
                 magic_counter = 0;
+            }
+        }
+        else if (!gpio_get(RESET_PIN))
+        {
+            uint32_t reset_started = time_us_32();
+
+            while (!gpio_get(RESET_PIN))
+            {
+                int32_t elapsed = time_us_32() - reset_started;
+                if (elapsed >= CYCLE_SLOT_TIMEOUT_US)
+                {
+                    gpio_put(RESET_PIN, false);
+                    gpio_set_dir(RESET_PIN, true);
+
+                    cycle_active_rom_slot();
+
+                    gpio_set_dir(RESET_PIN, false);
+
+                    reset_started = time_us_32();
+                }
             }
         }
     }
@@ -349,6 +397,8 @@ void __not_in_flash_func(main)()
 
     for (uint i = 0; i < 40; i++)
         gpio_set_function(i, i < 16 ? GPIO_FUNC_PIO0 : GPIO_FUNC_SIO);
+
+    gpio_pull_up(RESET_PIN);
 
     gpio_pull_down(BYTE_PIN);
 
