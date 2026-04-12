@@ -58,6 +58,17 @@ where `<addr>` depends on the slot:
 - slot 6: `0x10300000`
 - slot 7: `0x10380000`
 
+## Hardware revisions
+
+There are two revisions of the hardware. The difference between the revisions is
+quite minor. For rev2, the OE and CE signals have moved from gpio pins 36 and 35
+to pins 16 and 17. The benefit of this is that both PIOs with gpiobase=0 and
+gpiobase=16 can read the OE and CE signals. This in turn results in that using
+rev2, the time from when the Amiga negates the OE signal to when the RPROM
+tri-states the data bus is a small number of nanoseconds shorter. In most cases
+this won't make any difference. In any case, if you are ordering new RPROM PCBs
+then you likely prefer the latest revision.
+
 ## Compiling the firmware
 
 In order to compile the firmware you need a recent version (e.g. 2.2.0 or later)

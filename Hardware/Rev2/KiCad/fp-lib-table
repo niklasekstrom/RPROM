@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "RPROM")(type "KiCad")(uri "${KIPRJMOD}/RPROM.pretty")(options "")(descr ""))
+)
