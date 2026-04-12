@@ -19,7 +19,7 @@ switch which slot is the *active slot*.
 This repository contains the [hardware](Hardware), [firmware](Firmware) and
 [software](Software) for RPROM. The design is intended to be easily
 understandable and hackable. For example, the firmware is built from a single,
-roughly 300 lines long, [source code file](Firmware/rprom.c).
+roughly 500 lines long, [source code file](Firmware/rprom.c).
 
 ## The RPROM command
 
@@ -57,6 +57,16 @@ where `<addr>` depends on the slot:
 - slot 5: `0x10280000`
 - slot 6: `0x10300000`
 - slot 7: `0x10380000`
+
+## Compiling the firmware
+
+In order to compile the firmware you need a recent version (e.g. 2.2.0 or later)
+of the [pico-sdk](https://github.com/raspberrypi/pico-sdk).
+
+Note that there is a `RPROM_REV` compile definition in
+[Firmware/CMakeLists.txt](Firmware/CMakeLists.txt) that should be equal to the
+hardware revision that the firmware should be used with. Make sure you set it to
+the correct value.
 
 ## License
 

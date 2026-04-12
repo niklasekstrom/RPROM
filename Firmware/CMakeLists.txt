@@ -26,6 +26,7 @@ pico_enable_stdio_uart(rprom 0)
 pico_add_extra_outputs(rprom)
 
 target_compile_definitions(rprom PRIVATE
+  RPROM_REV=1
   PICO_RP2350A=0
   PICO_BOOT_STAGE2_CHOOSE_W25Q080=1
   PICO_FLASH_SPI_CLKDIV=2

@@ -17,12 +17,27 @@
 
 #include "protocol.h"
 
+#if RPROM_REV == 1
+
 #define D0_PIN          0
 #define A0_PIN          16
 #define BYTE_PIN        34
 #define CE_PIN          35
 #define OE_PIN          36
 #define RESET_PIN       37
+
+#elif RPROM_REV == 2
+
+#define D0_PIN          0
+#define OE_PIN          16
+#define CE_PIN          17
+#define A0_PIN          18
+#define BYTE_PIN        36
+#define RESET_PIN       37
+
+#else
+#error "Must define RPROM_REV as either 1 or 2"
+#endif
 
 #define DATA_PIO        pio0
 #define DIRECTION_SM    0
@@ -35,7 +50,7 @@
 
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   1
-#define PATCH_VERSION   1
+#define PATCH_VERSION   2
 
 #define ROM_SLOT_SIZE   (512 * 1024)
 
@@ -310,6 +325,8 @@ static void setup_data_pio_state_machines()
     // Direction state machine.
     const uint direction_offset = 0;
 
+#if RPROM_REV == 1
+
     const uint16_t direction_instructions[] =
     {
                 //     .wrap_target
@@ -320,6 +337,21 @@ static void setup_data_pio_state_machines()
                 //     .wrap
     };
 
+#elif RPROM_REV == 2
+
+    const uint16_t direction_instructions[] =
+    {
+                //     .wrap_target
+        0xa063, //  0: mov    pindirs, null
+        0x2010, //  1: wait   0 gpio, 16
+        0x00c1, //  2: jmp    pin, 1
+        0xa06b, //  3: mov    pindirs, ~null
+        0x2090, //  4: wait   1 gpio, 16
+                //     .wrap
+    };
+
+#endif
+
     const uint direction_length = sizeof(direction_instructions) / sizeof(uint16_t);
 
     for (uint i = 0; i < direction_length; i++)
@@ -327,6 +359,9 @@ static void setup_data_pio_state_machines()
 
     pio_sm_config c_direction = pio_get_default_sm_config();
     sm_config_set_wrap(&c_direction, direction_offset, direction_offset + direction_length - 1);
+#if RPROM_REV == 2
+    sm_config_set_jmp_pin(&c_direction, CE_PIN);
+#endif
     sm_config_set_out_pins(&c_direction, D0_PIN, 16);
     pio_sm_init(DATA_PIO, DIRECTION_SM, direction_offset, &c_direction);
     pio_sm_set_enabled(DATA_PIO, DIRECTION_SM, true);
@@ -361,6 +396,8 @@ static void setup_address_pio_state_machines(bool a500_rev5)
     const uint address_offset = 0;
     const uint16_t in_pins = a500_rev5 ? 19 : 18;
 
+#if RPROM_REV == 1
+
     const uint16_t address_instructions[] =
     {
                                 //     .wrap_target
@@ -372,6 +409,20 @@ static void setup_address_pio_state_machines(bool a500_rev5)
         0xc009,                 //  5: irq    prev nowait 1
                                 //     .wrap
     };
+
+#elif RPROM_REV == 2
+
+    const uint16_t address_instructions[] =
+    {
+                                //     .wrap_target
+        0x2000 + OE_PIN - 16,   //  0: wait   0 gpio, 16
+        0x00c0,                 //  1: jmp    pin, 0
+        0x4000 + in_pins,       //  2: in     pins, 18
+        0x2080 + OE_PIN - 16,   //  3: wait   1 gpio, 16
+                                //     .wrap
+    };
+
+#endif
 
     const uint address_length = sizeof(address_instructions) / sizeof(uint16_t);
 
